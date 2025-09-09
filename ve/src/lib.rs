@@ -1,4 +1,4 @@
-use crate::oneshot::{ decrypt, encrypt, ring_lwe_enc, setup, verify};
+use crate::oneshot::{decrypt, encrypt, ring_lwe_dec, ring_lwe_enc, setup, verify};
 use crate::r_ring::R;
 use crate::util::concat_vectors;
 use nalgebra::{DMatrix, DVector};
@@ -19,6 +19,7 @@ pub use gadget::gadget_reconstruct;
 pub use oneshot::SecretKey;
 pub use oneshot::PublicKey;
 
+#[derive(Debug,Clone)]
 pub struct Store {
     r: DVector<R>,
     e: DVector<R>,
@@ -89,12 +90,20 @@ impl VE {
     /// when p ≡ 5 mod 8, small-norm elements are invertible in Rp, enabling deterministic
     /// recovery of the original m via m = m' * (c / c') mod p. Returns Some(m) on success
     /// or None on failure.
-    pub fn decrypt(
+    pub fn try_decrypt(
         pk: &PublicKey,
         sk: &SecretKey,
         t: (&DVector<R>, &DVector<R>, &R, &DVector<R>),
     ) -> Option<DVector<R>> {
         decrypt(pk, sk, t)
+    }
+
+    pub fn decrypt(
+        sk: &SecretKey,
+        v: &DVector<R>,
+        w: &DVector<R>,
+    ) -> DVector<R> {
+        ring_lwe_dec(sk,v,w)
     }
 }
 
@@ -126,13 +135,13 @@ mod tests {
 
         let vs = VE::verify(&pk, &b, &u, t);
         assert!(vs, "Invalid CipherText");
-        let m_bar = VE::decrypt(&pk, &sk, t);
+        let m_bar = VE::try_decrypt(&pk, &sk, t);
         match m_bar {
             Some(m_bar) => {
                 assert_eq!(m_bar, st.m, "Inconsistent decryption");
                 assert_eq!(m_bar.len(), xl * LOG_P + yl * LOG_P);
 
-                let (sx,sy) = split_m_bar(m_bar, xl, yl);
+                let (sx,sy) = split_m_bar(m_bar, xl, yl).unwrap();
                 let x_recover = gadget_reconstruct(&sx);
                 let y_recover = gadget_reconstruct(&sy);
                 assert_eq!(x_recover, x, "x inconsistent");

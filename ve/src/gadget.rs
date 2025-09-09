@@ -99,16 +99,22 @@ pub fn build_b_matrix(r: &DMatrix<R>) -> DMatrix<R> {
     result
 }
 
-pub fn split_m_bar(vector: DVector<R>, xl: usize, yl: usize) -> (DVector<R>, DVector<R>) {
+pub fn split_m_bar(vector: DVector<R>, xl: usize, yl: usize) -> Result<(DVector<R>, DVector<R>), String> {
     let xl_len = xl * LOG_P;
     let yl_len = yl * LOG_P;
 
-    assert_eq!(vector.len(), xl_len + yl_len, "m_bar's length must equal xl * log_p + yl * log_p");
+    if vector.len() != xl_len + yl_len {
+        return Err(format!(
+            "m_bar's length must equal xl * log_p + yl * log_p, got {} but expected {}",
+            vector.len(),
+            xl_len + yl_len
+        ));
+    }
 
     let xl_vector = DVector::from_vec(vector.as_slice()[..xl_len].to_vec());
     let yl_vector = DVector::from_vec(vector.as_slice()[xl_len..].to_vec());
 
-    (xl_vector, yl_vector)
+    Ok((xl_vector, yl_vector))
 }
 
 #[test]

@@ -1,6 +1,7 @@
+use crate::error::DecryptionError;
 use crate::shamir::{shamir_reconstruct, shamir_share};
 use crate::util::{cipher_to_bytes, generate_r_matrix, verify_merkle};
-use hrcrypto::hash::{do_hash, Hash};
+use hrcrypto::hash::{Hash, do_hash};
 use hrtypes::appxcon::HashingAlg;
 use merkle_light::merkle::MerkleTree;
 use merkle_light::proof::Proof;
@@ -8,7 +9,7 @@ use nalgebra::DVector;
 use std::time::Instant;
 use ve::r_ring::R;
 use ve::util::{random_gaussian_dvector, vector_norm_inf};
-use ve::{build_b_matrix, calculate_u, gadget_reconstruct, split_m_bar, PublicKey, SecretKey, VE};
+use ve::{PublicKey, SecretKey, VE, build_b_matrix, calculate_u, gadget_reconstruct, split_m_bar};
 
 pub const X_LEN: usize = 1;
 pub const Y_LEN: usize = 1;
@@ -104,18 +105,21 @@ pub fn verify(pk: &PublicKey, share: &PrivateShare, u: &DVector<R>, h: Hash) -> 
     VE::verify(pk, &b, u, (&share.v, &share.w, &share.c, &share.z))
 }
 
-pub fn decrypt(pk: &PublicKey, sk: &SecretKey, share: &PrivateShare) -> Option<(DVector<R>,DVector<R>)> {
-    let res = VE::decrypt(pk,sk,(&share.v, &share.w, &share.c, &share.z));
+pub fn decrypt(
+    pk: &PublicKey,
+    sk: &SecretKey,
+    share: &PrivateShare,
+) -> Result<(DVector<R>, DVector<R>), DecryptionError> {
+    let res = VE::try_decrypt(pk, sk, (&share.v, &share.w, &share.c, &share.z));
     match res {
         Some(m_bar) => {
-            let (sx,sy) = split_m_bar(m_bar, X_LEN, Y_LEN);
+            let (sx, sy) =
+                split_m_bar(m_bar, X_LEN, Y_LEN).map_err(|e| DecryptionError::InvalidLength)?;
             let x_recover = gadget_reconstruct(&sx);
             let y_recover = gadget_reconstruct(&sy);
-            Some((x_recover, y_recover))
+            Ok((x_recover, y_recover))
         }
-        None => {
-            None
-        }
+        None => Err(DecryptionError::InvalidCipher),
     }
 }
 pub fn test_share() {
@@ -148,12 +152,12 @@ pub fn test_share() {
     println!("verify result: {:?}", res);
 
     let mut x_decs = Vec::new();
-    for id in 0..n{
+    for id in 0..n {
         let dec = decrypt(&pks[id].1, &sks[id].1, &shares.0[id]).unwrap();
         x_decs.push((id as i32 + 1, dec.0));
     }
     let x_recon = shamir_reconstruct(&x_decs, t).unwrap();
 
     println!("x_recon: {:?}", x_recon);
-    assert_eq!(x,x_recon);
+    assert_eq!(x, x_recon);
 }

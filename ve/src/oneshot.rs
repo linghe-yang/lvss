@@ -3,7 +3,7 @@ use crate::rp::P_PRIME;
 use crate::rq::Q_PRIME;
 use crate::util::*;
 use nalgebra::{DMatrix, DVector};
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 use rand_distr::num_traits::Zero;
 use std::f64::consts::E;
 
@@ -117,9 +117,9 @@ pub fn encrypt(
     loop {
         // Step 3: y ← DR^{4k},0,σ
         let y_r = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng, sigma));
-        let y_e = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng,sigma));
-        let y_e_prime = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng,sigma));
-        let y_m = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng,sigma));
+        let y_e = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng, sigma));
+        let y_e_prime = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng, sigma));
+        let y_m = DVector::from_fn(k, |_, _| R::random_gaussian(&mut rng, sigma));
         let y = concat_vectors(&[y_r.clone(), y_e.clone(), y_e_prime.clone(), y_m.clone()]);
 
         // Compute commitment = b' y mod (q,q,p)
@@ -258,6 +258,21 @@ pub fn verify(
 
     // Step 3: return true
     true
+}
+
+pub fn ring_lwe_dec(
+    sk: &SecretKey,
+    v: &DVector<R>,
+    w: &DVector<R>,
+) -> DVector<R> {
+    let k = v.len();
+    let mut m = DVector::zeros(k);
+    for i in 0..k {
+        let v_s1 = v[i].mul_mod_q(&sk.s1);
+        m[i] = w[i].sub_mod_q(&v_s1);
+        m[i].mod_p();
+    }
+    m
 }
 
 pub fn decrypt(
