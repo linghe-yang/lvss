@@ -1,7 +1,7 @@
 use crate::error::DecryptionError;
 use crate::shamir::{shamir_reconstruct, shamir_share};
 use crate::util::{cipher_to_bytes, generate_r_matrix, verify_merkle};
-use hrcrypto::hash::{do_hash, Hash, HASH_SIZE};
+use hrcrypto::hash::{do_hash, Hash};
 use hrtypes::appxcon::HashingAlg;
 use merkle_light::merkle::MerkleTree;
 use merkle_light::proof::Proof;
@@ -242,64 +242,29 @@ pub fn test_share_avsss() {
         sks.push((i as i32, sk));
     }
 
-    // let now = Instant::now();
+    let now = Instant::now();
 
     let (pri_shares, pub_share, st) = share(x.clone(), n, t, &pks);
 
-    let original = pri_shares[0].clone();
+    let duration = now.elapsed();
+    println!("share took {} ms", duration.as_millis());
 
-    // 测试序列化
-    let serialized = serde_json::to_string(&original).expect("Failed to serialize PrivateShare");
-    println!("{}", serialized);
+    let u = shamir_reconstruct(&pub_share.u_vec, t).unwrap();
 
-    // 测试反序列化
-    let deserialized: PrivateShare = serde_json::from_str(&serialized)
-        .expect("Failed to deserialize PrivateShare");
+    let vss_st = st.filter_by_indices(&[1]);
 
-    // 验证反序列化后的值
-    assert_eq!(deserialized.id, original.id, "ID does not match");
-    assert_eq!(deserialized.v, original.v, "Vector v does not match");
-    assert_eq!(deserialized.w, original.w, "Vector w does not match");
-    assert_eq!(
-        deserialized.merkle_proof.lemma(),
-        original.merkle_proof.lemma(),
-        "Merkle proof lemma does not match"
-    );
-    assert_eq!(
-        deserialized.merkle_proof.path(),
-        original.merkle_proof.path(),
-        "Merkle proof path does not match"
-    );
+    let sups = supple_share(vss_st, &pks);
+    let vs = verify(&pks[0].1, &sups[0], &pub_share.u_vec[0].1, pub_share.merkle_root);
+    println!("verify res = {}", vs);
 
-    // 验证整个结构体相等
-    assert_eq!(
-        format!("{:?}", deserialized),
-        format!("{:?}", original),
-        "Deserialized PrivateShare does not match original"
-    );
+    let mut x_decs = Vec::new();
+    for id in 0..n {
+        let dec = decrypt(&sks[id].1, &pri_shares[id]).unwrap();
+        x_decs.push((id as i32 + 1, dec.0));
+    }
+    let x_recon = shamir_reconstruct(&x_decs, t).unwrap();
 
-
-
-
-    // let duration = now.elapsed();
-    // println!("share took {} ms", duration.as_millis());
-    //
-    // let u = shamir_reconstruct(&pub_share.u_vec, t).unwrap();
-    //
-    // let vss_st = st.filter_by_indices(&[1]);
-    //
-    // let sups = supple_share(vss_st, &pks);
-    // let vs = verify(&pks[0].1, &sups[0], &pub_share.u_vec[0].1, pub_share.merkle_root);
-    // println!("verify res = {}", vs);
-    //
-    // let mut x_decs = Vec::new();
-    // for id in 0..n {
-    //     let dec = decrypt(&sks[id].1, &pri_shares[id]).unwrap();
-    //     x_decs.push((id as i32 + 1, dec.0));
-    // }
-    // let x_recon = shamir_reconstruct(&x_decs, t).unwrap();
-    //
-    // assert_eq!(x, x_recon);
+    assert_eq!(x, x_recon);
 }
 
 
