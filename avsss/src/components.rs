@@ -1,16 +1,16 @@
 use crate::error::DecryptionError;
 use crate::shamir::{shamir_reconstruct, shamir_share};
 use crate::util::{cipher_to_bytes, generate_r_matrix, verify_merkle};
-use hrcrypto::hash::{Hash, do_hash};
+use hrcrypto::hash::{do_hash, Hash};
 use hrtypes::appxcon::HashingAlg;
 use merkle_light::merkle::MerkleTree;
 use merkle_light::proof::Proof;
 use nalgebra::{DMatrix, DVector};
 use std::time::Instant;
 use ve::r_ring::R;
-use ve::util::{random_gaussian_dvector, vector_norm_inf};
+use ve::util::random_gaussian_dvector;
 use ve::{
-    PublicKey, SecretKey, Store, VE, build_b_matrix, calculate_u, gadget_reconstruct, split_m_bar,
+    build_b_matrix, calculate_u, gadget_reconstruct, split_m_bar, PublicKey, SecretKey, Store, VE,
 };
 
 pub const X_LEN: usize = 1;
@@ -188,10 +188,16 @@ pub fn supple_share(vss_st: SharingStore, pks: &Vec<(i32, PublicKey)>) -> Vec<Su
     shares
 }
 
+pub fn is_merkle_valid(h: Hash, v: &DVector<R>, w: &DVector<R>, proof: &Proof<Hash>) -> bool {
+    let leaf = do_hash(&cipher_to_bytes((v, w)));
+    if !verify_merkle(&h, leaf, &proof, &mut HashingAlg::new()) {
+        return false;
+    }
+    true
+}
+
 pub fn verify(pk: &PublicKey, share: &SuppleShare, u: &DVector<R>, h: Hash) -> bool {
-    let leaf = do_hash(&cipher_to_bytes((&share.v, &share.w)));
-    if !verify_merkle(&h, leaf, &share.merkle_proof, &mut HashingAlg::new()) {
-        println!("Failed to verify merkle proof");
+    if !is_merkle_valid(h, &share.v, &share.w, &share.merkle_proof){
         return false;
     }
     let r = generate_r_matrix(h, X_LEN, Y_LEN, R_SIGMA);
