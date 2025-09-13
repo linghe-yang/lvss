@@ -25,10 +25,28 @@ impl PublicKey {
         bytes
     }
 }
+impl Default for PublicKey {
+    fn default() -> Self {
+        PublicKey {
+            a: R::default(),
+            t: R::default(),
+            p: 0,
+            q: 0,
+        }
+    }
+}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SecretKey {
     pub s1: R,
+}
+
+impl Default for SecretKey {
+    fn default() -> Self {
+        SecretKey {
+            s1: R::default(),
+        }
+    }
 }
 
 pub const MAX_C_L1: usize = 36;
