@@ -43,6 +43,7 @@ pub struct SuppleShare {
     pub merkle_proof: Proof<Hash>,
 }
 
+#[derive(Debug, Clone)]
 pub struct SharingStore {
     pub ciphers: Vec<(i32, DVector<R>, DVector<R>, Store)>,
     pub u_vec: Vec<(i32, DVector<R>)>,
@@ -50,6 +51,16 @@ pub struct SharingStore {
     pub merkle_proofs: Vec<(i32,Proof<Hash>)>,
 }
 
+impl Default for SharingStore {
+    fn default() -> Self {
+        SharingStore {
+            ciphers: Vec::default(),
+            u_vec: Vec::default(),
+            r: DMatrix::from_fn(1,1,|_, _| R::default()),
+            merkle_proofs: Vec::default(),
+        }
+    }
+}
 impl SharingStore {
     pub fn filter_by_indices(&self, indices: &[i32]) -> Self {
         // 检查 indices 是否为空
