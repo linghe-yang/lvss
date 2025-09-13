@@ -6,8 +6,9 @@ use nalgebra::{DMatrix, DVector};
 use rand::{Rng, thread_rng};
 use rand_distr::num_traits::Zero;
 use std::f64::consts::E;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct PublicKey {
     pub a: R,
     pub t: R,
@@ -25,7 +26,7 @@ impl PublicKey {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SecretKey {
     pub s1: R,
 }
