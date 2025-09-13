@@ -119,6 +119,10 @@ pub fn vector_norm_l2_squared(vec: &DVector<R>) -> f64 {
     vec.iter().map(|r| r.norm_l2().powi(2)).sum()
 }
 
+pub fn euclidean_norm(vec: &DVector<R>) -> f64 {
+    vector_norm_l2_squared(vec).sqrt()
+}
+
 // // Helper: Dot product over all coefficients (flattened)
 pub fn vector_dot_product(vec1: &DVector<R>, vec2: &DVector<R>) -> f64 {
     let mut dot = 0.0;
