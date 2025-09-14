@@ -28,7 +28,7 @@ pub struct PrivateShare {
     pub merkle_proof: Proof<Hash>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct PublicShare {
     pub merkle_root: Hash,
     pub u_vec: Vec<(i32, DVector<R>)>,
