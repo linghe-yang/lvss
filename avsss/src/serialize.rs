@@ -75,7 +75,7 @@ impl Serialize for SuppleShare {
     where
         S: Serializer,
     {
-        let mut seq = serializer.serialize_seq(Some(6))?;
+        let mut seq = serializer.serialize_seq(Some(7))?;
         seq.serialize_element(&self.id)?;
         seq.serialize_element(&self.v.as_slice())?;
         seq.serialize_element(&self.w.as_slice())?;
