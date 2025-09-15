@@ -154,3 +154,10 @@ fn mod_inverse(a: i32, p: i32) -> i32 {
     res = (res + p as i64) % (p as i64);
     res as i32
 }
+
+
+
+pub fn shamir_reconstruct_with_correction(shares: &[(i32, DVector<R>)], t: usize) -> Option<DVector<R>> {
+    //TODO: Reed Solomon Code for robust reconstruction
+    shamir_reconstruct(shares,t)
+}

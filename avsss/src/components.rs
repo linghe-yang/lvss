@@ -13,12 +13,13 @@ use ve::{
     build_b_matrix, calculate_u, gadget_reconstruct, split_m_bar, PublicKey, SecretKey, Store, VE,
 };
 
-pub const X_LEN: usize = 1;
+pub const X_LEN: usize = 2;
 pub const Y_LEN: usize = 1;
 pub const X_SIGMA: f64 = 1.0;
 pub const Y_SIGMA: f64 = 1.0;
 pub const R_SIGMA: f64 = 1.0;
 pub const B_PRIME: f64 = 100000.0;
+pub const BETA: i32 = 128;
 
 #[derive(Debug, Clone)]
 pub struct PrivateShare {
