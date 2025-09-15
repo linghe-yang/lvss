@@ -1,13 +1,6 @@
 use std::collections::HashSet;
-use std::cmp::Ordering;
+use ve::r_ring::{N, R};
 use ve::rp::P_PRIME;
-
-pub const N: usize = 256;
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct R {
-    pub coeffs: [i32; N],
-}
 
 // Helper function to compute (a % m) in positive range
 fn mod_positive(a: i64, m: i64) -> i64 {
