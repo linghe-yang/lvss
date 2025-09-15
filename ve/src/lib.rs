@@ -16,8 +16,7 @@ pub use gadget::calculate_u;
 pub use gadget::split_m_bar;
 pub use gadget::gadget_decompose;
 pub use gadget::gadget_reconstruct;
-pub use util::vector_norm_inf;
-pub use util::euclidean_norm;
+pub use util::*;
 pub use oneshot::SecretKey;
 pub use oneshot::PublicKey;
 
