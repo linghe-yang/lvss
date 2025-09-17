@@ -18,9 +18,9 @@ pub(crate) fn cipher_to_bytes(tuple: (&DVector<R>, &DVector<R>)) -> Vec<u8> {
     bytes
 }
 
-pub fn generate_r_matrix(seed: Hash, xl: usize, yl: usize, sigma: f64) -> DMatrix<R> {
+pub fn generate_r_matrix(seed: Hash, xl: usize, yl: usize, _sigma: f64) -> DMatrix<R> {
     let mut rng = ChaCha12Rng::from_seed(seed);
-    DMatrix::from_fn(yl, xl, |_, _| R::random_gaussian(&mut rng, sigma))
+    DMatrix::from_fn(yl, xl, |_, _| R::random_ternary(&mut rng))
 }
 
 pub(crate) fn verify_merkle<T: Ord + Clone + AsRef<[u8]>, A: Algorithm<T>>(root:&T, leaf: T, proof: &Proof<T>, alg: &mut A ) -> bool {

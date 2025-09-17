@@ -45,6 +45,18 @@ impl R {
         Self { coeffs }
     }
 
+    pub fn random_ternary<RR: Rng>(rng: &mut RR) -> Self {
+        let mut coeffs = [0; N];
+        for coeff in coeffs.iter_mut() {
+            *coeff = match rng.gen_range(0..4) {
+                0 => -1, // 1/4 probability
+                1 => 1,  // 1/4 probability
+                _ => 0,  // 1/2 probability
+            };
+        }
+        Self { coeffs }
+    }
+
     pub fn random_in_p() -> Self {
         Self::random_uniform(-P_PRIME/2, P_PRIME/2)
     }
