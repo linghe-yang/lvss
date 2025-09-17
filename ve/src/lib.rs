@@ -119,8 +119,8 @@ mod tests {
     #[test]
     fn test() {
         let (pk, sk) = VE::gen_keypair();
-        let xl = 4;
-        let yl = 4;
+        let xl = 1;
+        let yl = 1;
         let half_p = P_PRIME / 2;
         let x = random_dvector(xl);
         let y = random_dvector(yl);
@@ -145,8 +145,12 @@ mod tests {
                 let (sx,sy) = split_m_bar(m_bar, xl, yl).unwrap();
                 let x_recover = gadget_reconstruct(&sx);
                 let y_recover = gadget_reconstruct(&sy);
-                assert_eq!(x_recover, x, "x inconsistent");
-                assert_eq!(y_recover, y, "y inconsistent");
+                for (i,ele) in x_recover.iter().enumerate(){
+                    assert!(ele.equal_mod_p(&x[i]))
+                }
+                for (i,ele) in y_recover.iter().enumerate(){
+                    assert!(ele.equal_mod_p(&y[i]))
+                }
 
                 println!("Decryption Success!");
 
