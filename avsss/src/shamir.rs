@@ -3,7 +3,7 @@ use ve::r_ring::R;
 use ve::rp::P_PRIME;
 use ve::util::random_dvector;
 
-pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i32, DVector<R>)> {
+pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i64, DVector<R>)> {
     let dim = s.len();
     let p = P_PRIME;
     let mut coeffs: Vec<DVector<R>> = vec![s.clone()];
@@ -13,9 +13,9 @@ pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i32, DVector<R>)
 
     let mut shares = Vec::with_capacity(n);
     for i in 1..=n {
-        let x = i as i32;
+        let x = i as i64;
         let mut eval = coeffs[0].clone();
-        let mut x_pow = 1i32;
+        let mut x_pow = 1i64;
         for k in 1..=t {
             x_pow = mod_mul(x_pow, x, p);
             let scalar = x_pow;
@@ -26,7 +26,7 @@ pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i32, DVector<R>)
     }
     shares
 }
-pub fn shamir_reconstruct(shares: &[(i32, DVector<R>)], t: usize) -> Option<DVector<R>> {
+pub fn shamir_reconstruct(shares: &[(i64, DVector<R>)], t: usize) -> Option<DVector<R>> {
     let p = P_PRIME;
     let m = shares.len();
     if m < t + 1 {
@@ -57,7 +57,7 @@ pub fn shamir_reconstruct(shares: &[(i32, DVector<R>)], t: usize) -> Option<DVec
 }
 
 
-fn reconstruct_base(shares: &[(i32, DVector<R>)], p: i32) -> DVector<R> {
+fn reconstruct_base(shares: &[(i64, DVector<R>)], p: i64) -> DVector<R> {
     let m = shares.len(); // Exactly t+1
     let dim = shares[0].1.len();
     let zero_r = R::default();
@@ -67,8 +67,8 @@ fn reconstruct_base(shares: &[(i32, DVector<R>)], p: i32) -> DVector<R> {
         let xj = shares[j].0;
         let yj = &shares[j].1;
 
-        let mut l_num = 1i32;
-        let mut l_den = 1i32;
+        let mut l_num = 1i64;
+        let mut l_den = 1i64;
         for k in 0..m {
             if k == j {
                 continue;
@@ -92,7 +92,7 @@ fn reconstruct_base(shares: &[(i32, DVector<R>)], p: i32) -> DVector<R> {
 
 
 // Helper function to evaluate the polynomial at a new point x_new using exactly t+1 shares
-fn lagrange_eval(shares: &[(i32, DVector<R>)], x_new: i32, p: i32) -> DVector<R> {
+fn lagrange_eval(shares: &[(i64, DVector<R>)], x_new: i64, p: i64) -> DVector<R> {
     let m = shares.len(); // Exactly t+1
     let dim = shares[0].1.len();
     let zero_r = R::default();
@@ -102,8 +102,8 @@ fn lagrange_eval(shares: &[(i32, DVector<R>)], x_new: i32, p: i32) -> DVector<R>
         let xi = shares[i].0;
         let yi = &shares[i].1;
 
-        let mut num = 1i32;
-        let mut den = 1i32;
+        let mut num = 1i64;
+        let mut den = 1i64;
         for j in 0..m {
             if i == j {
                 continue;
@@ -123,22 +123,22 @@ fn lagrange_eval(shares: &[(i32, DVector<R>)], x_new: i32, p: i32) -> DVector<R>
     result
 }
 
-fn mod_mul(a: i32, b: i32, p: i32) -> i32 {
-    let product = (a as i64 * b as i64) % (p as i64);
-    ((product + p as i64) % p as i64) as i32
+fn mod_mul(a: i64, b: i64, p: i64) -> i64 {
+    let product = (a as i128 * b as i128) % (p as i128);
+    ((product + p as i128) % p as i128) as i64
 }
 
-fn mod_diff(a: i32, b: i32, p: i32) -> i32 {
-    let diff = (a as i64 - b as i64) % (p as i64);
-    ((diff + p as i64) % p as i64) as i32
+fn mod_diff(a: i64, b: i64, p: i64) -> i64 {
+    let diff = (a as i128 - b as i128) % (p as i128);
+    ((diff + p as i128) % p as i128) as i64
 }
 
-fn mod_inverse(a: i32, p: i32) -> i32 {
-    let mut t = 0i64;
-    let mut nt = 1i64;
-    let mut r = p as i64;
-    let mut nr = (a as i64).abs() % (p as i64);
-    let sign = if a < 0 { -1i64 } else { 1i64 };
+fn mod_inverse(a: i64, p: i64) -> i64 {
+    let mut t = 0i128;
+    let mut nt = 1i128;
+    let mut r = p as i128;
+    let mut nr = (a as i128).abs() % (p as i128);
+    let sign = if a < 0 { -1i128 } else { 1i128 };
 
     while nr != 0 {
         let q = r / nr;
@@ -150,9 +150,9 @@ fn mod_inverse(a: i32, p: i32) -> i32 {
         r = tmp_nr;
     }
 
-    let mut res = (t * sign) % (p as i64);
-    res = (res + p as i64) % (p as i64);
-    res as i32
+    let mut res = (t * sign) % (p as i128);
+    res = (res + p as i128) % (p as i128);
+    res as i64
 }
 
 

@@ -19,7 +19,7 @@ pub const R_SIGMA: f64 = 1.0;
 
 #[derive(Debug, Clone)]
 pub struct PrivateShare {
-    pub id: i32,
+    pub id: i64,
     pub v: DVector<R>,
     pub w: DVector<R>,
     pub c: R,
@@ -30,14 +30,14 @@ pub struct PrivateShare {
 #[derive(Debug, Clone)]
 pub struct PublicShare {
     pub merkle_root: Hash,
-    pub u_vec: Vec<(i32, DVector<R>)>,
+    pub u_vec: Vec<(i64, DVector<R>)>,
 }
 
 pub fn share(
     x: DVector<R>,
     n: usize,
     t: usize,
-    pks: &Vec<(i32, PublicKey)>,
+    pks: &Vec<(i64, PublicKey)>,
 ) -> (Vec<PrivateShare>, PublicShare) {
     let x_shares = shamir_share(&x, n, t);
     let y = random_gaussian_dvector(Y_LEN, Y_SIGMA);
@@ -131,8 +131,8 @@ pub fn test_share() {
     let mut sks = Vec::new();
     for i in 1..=n {
         let (pk, sk) = VE::gen_keypair();
-        pks.push((i as i32, pk));
-        sks.push((i as i32, sk));
+        pks.push((i as i64, pk));
+        sks.push((i as i64, sk));
     }
 
     let now = Instant::now();
@@ -154,7 +154,7 @@ pub fn test_share() {
     let mut x_decs = Vec::new();
     for id in 0..n {
         let dec = decrypt(&pks[id].1, &sks[id].1, &shares.0[id]).unwrap();
-        x_decs.push((id as i32 + 1, dec.0));
+        x_decs.push((id as i64 + 1, dec.0));
     }
     let x_recon = shamir_reconstruct(&x_decs, t).unwrap();
 

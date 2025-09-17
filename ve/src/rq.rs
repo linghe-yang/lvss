@@ -1,44 +1,54 @@
+use crate::barrett::symmetric_barrett_reduce;
 use crate::r_ring::{N, R};
 use crate::zetas::ZETAS_256;
 
-pub const Q_PRIME: i32 = (1 << 23) - (1 << 13) + 1;
-// pub const Q_PRIME: i64 = 140737488357377i64;
-pub const Q_INV: i32 = 58728449; // q^(-1) mod 2^32
+// pub const Q_PRIME: i64 = (1 << 23) - (1 << 13) + 1;
+// pub const Q_INV: i64 = 1732267787797143553; // q^(-1) mod 2^32
+//
+// const MULT_Q: i128 = 2201172575746; // Precomputed for q_prime = 3
+// const HALF_Q: i64 = 4190208; // Precomputed for q_prime = 3
+
+pub const Q_PRIME: i64 = 34359724033;
+pub const Q_INV: i64 = -5903494919661537279; // q^(-1) mod 2^64
+
+const MULT_Q: i128 = 536871136;
+const Q_HALF: i64 = 17179862016;
 
 
-pub fn reduce32_q(a: i32) -> i32 {
-    let mut t = (a + (1 << 22)) >> 23;
-    t = a - t.wrapping_mul(Q_PRIME);
-    t
+pub fn reduce32_q(a: i64) -> i64 {
+    // let mut t = (a + (1 << 22)) >> 23;
+    // t = a - t.wrapping_mul(Q_PRIME);
+    // t
+    symmetric_barrett_reduce(a as i128, Q_PRIME, MULT_Q, Q_HALF)
 }
-pub const Q_HALF: i32 = Q_PRIME >> 1;
-pub fn reduce64_q(a: i64) -> i32 {
-    let q = Q_PRIME as i64;
-    let r = a % q;
-    let r_i32 = r as i32;
-    if r_i32 > Q_HALF {
-        r_i32 - Q_PRIME
-    } else if r_i32 < -Q_HALF {
-        r_i32 + Q_PRIME
-    } else {
-        r_i32
-    }
+pub fn reduce64_q(a: i128) -> i64 {
+    // let q = Q_PRIME as i128;
+    // let r = a % q;
+    // let r_i64 = r as i64;
+    // if r_i64 > Q_HALF {
+    //     r_i64 - Q_PRIME
+    // } else if r_i64 < -Q_HALF {
+    //     r_i64 + Q_PRIME
+    // } else {
+    //     r_i64
+    // }
+    symmetric_barrett_reduce(a, Q_PRIME, MULT_Q, Q_HALF)
 }
 
-fn caddq(a: i32) -> i32 {
+fn caddq(a: i64) -> i64 {
     // In C right-shift of negative signed integers is implementation-defined, so C reference implementation contains bug.
     // In Rust if a < 0 right-shift is defined to fill with 1s, 0s otherwise, so we're bug free here.
-    a + ((a >> 31) & Q_PRIME)
+    a + ((a >> 63) & Q_PRIME)
 }
 
 /// For integer a with -2^{31} * Q <= a <= 2^31 * Q,
 /// compute r \equiv 2^{-32} * a (mod Q) such that -Q < r < Q.
 ///
 /// Returns r.
-pub fn montgomery_reduce(a: i64) -> i32 {
-    let mut t = (a as i32).wrapping_mul(Q_INV) as i64;
-    t = (a as i64 - t.wrapping_mul(Q_PRIME as i64)) >> 32;
-    t as i32
+pub fn montgomery_reduce(a: i128) -> i64 {
+    let mut t = (a as i64).wrapping_mul(Q_INV) as i128;
+    t = (a as i128 - t.wrapping_mul(Q_PRIME as i128)) >> 64;
+    t as i64
 }
 
 impl R {
@@ -56,12 +66,12 @@ impl R {
     }
 
     /// Multiplies the polynomial by a scalar, reducing each coefficient to [-p/2, p/2].
-    pub fn scalar_mul_mod_q(&self, scalar: i32) -> Self {
+    pub fn scalar_mul_mod_q(&self, scalar: i64) -> Self {
         let mut result = R { coeffs: [0; N] };
-        let scalar_64 = scalar as i64;
+        let scalar_64 = scalar as i128;
         for i in 0..N {
-            // Use i64 to avoid overflow in multiplication
-            let product = (self.coeffs[i] as i64) * scalar_64;
+            // Use i128 to avoid overflow in multiplication
+            let product = (self.coeffs[i] as i128) * scalar_64;
             // Directly reduce to [-p/2, p/2] using reduce32_p
             result.coeffs[i] = reduce64_q(product);
         }
@@ -71,6 +81,26 @@ impl R {
     /// Multiplies two polynomials in Z[x]/(x^N + 1) modulo p, reducing coefficients to [-p/2, p/2]. N must be 256
     pub fn mul_mod_q(&self, other: &Self) -> Self {
         poly_mul_q_256(self, &other)
+    }
+
+    pub fn mul_mod_q_conv(&self, other: &Self) -> Self {
+        let mut result = R { coeffs: [0; N] };
+        let mut temp = [0i128; N];
+
+        for i in 0..N {
+            for j in 0..N {
+                let k = (i + j) % N;
+                let sign = if i + j >= N { -1 } else { 1 };
+                let product = (self.coeffs[i] as i128) * (other.coeffs[j] as i128) * (sign as i128);
+                temp[k] = temp[k].wrapping_add(product);
+            }
+        }
+
+        for i in 0..N {
+            result.coeffs[i] = reduce64_q(temp[i]);
+        }
+
+        result
     }
 
     /// Adds two polynomials modulo p, reducing coefficients to [-p/2, p/2].
@@ -103,11 +133,11 @@ impl R {
 
 fn pointwise_montgomery(c: &mut R, a: &R, b: &R) {
     for i in 0..N {
-        c.coeffs[i] = montgomery_reduce(a.coeffs[i] as i64 * b.coeffs[i] as i64);
+        c.coeffs[i] = montgomery_reduce(a.coeffs[i] as i128 * b.coeffs[i] as i128);
     }
 }
 
-fn ntt_256(a: &mut [i32]) {
+fn ntt_256(a: &mut [i64]) {
     let mut k: usize = 0;
     let mut len: usize = 128;
 
@@ -115,10 +145,10 @@ fn ntt_256(a: &mut [i32]) {
         let mut start: usize = 0;
         while start < N {
             k += 1;
-            let zeta = ZETAS_256[k] as i64;
+            let zeta = ZETAS_256[k] as i128;
             let mut j = start;
             while j < (start + len) {
-                let t = montgomery_reduce(zeta.wrapping_mul(a[j + len] as i64));
+                let t = montgomery_reduce(zeta.wrapping_mul(a[j + len] as i128));
                 a[j + len] = a[j] - t;
                 a[j] += t;
                 j += 1;
@@ -129,22 +159,23 @@ fn ntt_256(a: &mut [i32]) {
     }
 }
 
-fn invntt_tomont_256(a: &mut [i32]) {
+fn invntt_tomont_256(a: &mut [i64]) {
     let mut k: usize = 256;
     let mut len: usize = 1;
-    const F: i64 = 41978; // mont^2/256
+    const F: i128 = 7320386123; // mont^2/256
+    // const F: i128 = 41978; // mont^2/256
 
     while len < N {
         let mut start: usize = 0;
         while start < 256 {
             k -= 1;
-            let zeta = -ZETAS_256[k] as i64;
+            let zeta = -ZETAS_256[k] as i128;
             let mut j = start;
             while j < (start + len) {
                 let t = a[j];
                 a[j] = t + a[j + len];
                 a[j + len] = t - a[j + len];
-                a[j + len] = montgomery_reduce(zeta.wrapping_mul(a[j + len] as i64));
+                a[j + len] = montgomery_reduce(zeta.wrapping_mul(a[j + len] as i128));
                 j += 1
             }
             start = j + len;
@@ -152,7 +183,7 @@ fn invntt_tomont_256(a: &mut [i32]) {
         len <<= 1;
     }
     for j in 0..N {
-        a[j] = montgomery_reduce(F.wrapping_mul(a[j] as i64));
+        a[j] = montgomery_reduce(F.wrapping_mul(a[j] as i128));
     }
 }
 

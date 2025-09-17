@@ -3,12 +3,12 @@ use ve::r_ring::{N, R};
 use ve::rp::P_PRIME;
 
 // Helper function to compute (a % m) in positive range
-fn mod_positive(a: i64, m: i64) -> i64 {
+fn mod_positive(a: i128, m: i128) -> i128 {
     ((a % m) + m) % m
 }
 
 // Extended Euclidean algorithm
-fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
+fn extended_gcd(a: i128, b: i128) -> (i128, i128, i128) {
     if a == 0 {
         (b, 0, 1)
     } else {
@@ -18,7 +18,7 @@ fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
 }
 
 // Modular inverse using extended gcd
-fn mod_inverse(a: i64, m: i64) -> Option<i64> {
+fn mod_inverse(a: i128, m: i128) -> Option<i128> {
     let (g, x, _) = extended_gcd(a, m);
     if g != 1 {
         None
@@ -28,17 +28,17 @@ fn mod_inverse(a: i64, m: i64) -> Option<i64> {
 }
 
 // Lagrange interpolation at a target point for scalar values in mod p
-fn lagrange_interpolate_at(target: i32, points: &[(i32, i32)], p: i32) -> Option<i32> {
+fn lagrange_interpolate_at(target: i64, points: &[(i64, i64)], p: i64) -> Option<i64> {
     let n = points.len();
-    let pp = p as i64;
-    let target_mod = mod_positive(target as i64, pp);
+    let pp = p as i128;
+    let target_mod = mod_positive(target as i128, pp);
 
-    let mut xs_mod: Vec<i64> = Vec::with_capacity(n);
-    let mut ys_mod: Vec<i64> = Vec::with_capacity(n);
+    let mut xs_mod: Vec<i128> = Vec::with_capacity(n);
+    let mut ys_mod: Vec<i128> = Vec::with_capacity(n);
 
     for &(x, y) in points {
-        xs_mod.push(mod_positive(x as i64, pp));
-        ys_mod.push(mod_positive(y as i64, pp));
+        xs_mod.push(mod_positive(x as i128, pp));
+        ys_mod.push(mod_positive(y as i128, pp));
     }
 
     // Check for distinct x_mod
@@ -49,14 +49,14 @@ fn lagrange_interpolate_at(target: i32, points: &[(i32, i32)], p: i32) -> Option
         }
     }
 
-    let mut result: i64 = 0;
+    let mut result: i128 = 0;
 
     for i in 0..n {
         let x_i = xs_mod[i];
         let y_i = ys_mod[i];
 
-        let mut num: i64 = 1;
-        let mut den: i64 = 1;
+        let mut num: i128 = 1;
+        let mut den: i128 = 1;
 
         for j in 0..n {
             if i == j {
@@ -81,16 +81,16 @@ fn lagrange_interpolate_at(target: i32, points: &[(i32, i32)], p: i32) -> Option
         result = mod_positive(result + contrib, pp);
     }
 
-    Some(result as i32)
+    Some(result as i64)
 }
 
 // Interpolate R at target by interpolating each coefficient independently
-fn interpolate_r_at(target: i32, points: &[(i32, R)], p: i32) -> Option<R> {
+fn interpolate_r_at(target: i64, points: &[(i64, R)], p: i64) -> Option<R> {
     let n = points.len();
-    let mut coeffs = [0i32; N];
+    let mut coeffs = [0i64; N];
 
     for j in 0..N {
-        let scalar_points: Vec<(i32, i32)> = points.iter().map(|&(x, ref r)| (x, r.coeffs[j])).collect();
+        let scalar_points: Vec<(i64, i64)> = points.iter().map(|&(x, ref r)| (x, r.coeffs[j])).collect();
         coeffs[j] = match lagrange_interpolate_at(target, &scalar_points, p) {
             Some(val) => val,
             None => return None,
@@ -100,24 +100,24 @@ fn interpolate_r_at(target: i32, points: &[(i32, R)], p: i32) -> Option<R> {
     Some(R { coeffs })
 }
 
-// Modular reduction for i32
-fn mod_i32(a: i32, p: i32) -> i32 {
-    let pp = p as i64;
-    let aa = a as i64;
-    mod_positive(aa, pp) as i32
+// Modular reduction for i64
+fn mod_i64(a: i64, p: i64) -> i64 {
+    let pp = p as i128;
+    let aa = a as i128;
+    mod_positive(aa, pp) as i64
 }
 
 // Compare two R modulo p
-fn eq_mod_r(a: &R, b: &R, p: i32) -> bool {
+fn eq_mod_r(a: &R, b: &R, p: i64) -> bool {
     for j in 0..N {
-        if mod_i32(a.coeffs[j], p) != mod_i32(b.coeffs[j], p) {
+        if mod_i64(a.coeffs[j], p) != mod_i64(b.coeffs[j], p) {
             return false;
         }
     }
     true
 }
 
-pub fn shamir_reconstruct_r(shares: &[(i32, R)], t: usize) -> Option<R> {
+pub fn shamir_reconstruct_r(shares: &[(i64, R)], t: usize) -> Option<R> {
     let p = P_PRIME;
     let n_shares = shares.len();
     let threshold = t + 1;
@@ -127,7 +127,7 @@ pub fn shamir_reconstruct_r(shares: &[(i32, R)], t: usize) -> Option<R> {
     }
 
     // Check distinct x
-    let mut xs: Vec<i32> = shares.iter().map(|&(x, _)| x).collect();
+    let mut xs: Vec<i64> = shares.iter().map(|&(x, _)| x).collect();
     xs.sort();
     for i in 1..n_shares {
         if xs[i] == xs[i - 1] {
@@ -136,7 +136,7 @@ pub fn shamir_reconstruct_r(shares: &[(i32, R)], t: usize) -> Option<R> {
     }
 
     // Sort shares by x for determinism
-    let mut sorted_shares: Vec<(i32, R)> = shares.to_vec();
+    let mut sorted_shares: Vec<(i64, R)> = shares.to_vec();
     sorted_shares.sort_by_key(|&(x, _)| x);
 
     // Reconstruct using first threshold points

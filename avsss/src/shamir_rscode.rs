@@ -3,12 +3,12 @@ use ve::r_ring::{N, R};
 use ve::rp::P_PRIME;
 
 // Helper function to compute (a % m) in positive range
-fn mod_positive(a: i64, m: i64) -> i64 {
+fn mod_positive(a: i128, m: i128) -> i128 {
     ((a % m) + m) % m
 }
 
 // Extended Euclidean algorithm
-fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
+fn extended_gcd(a: i128, b: i128) -> (i128, i128, i128) {
     if a == 0 {
         (b, 0, 1)
     } else {
@@ -18,7 +18,7 @@ fn extended_gcd(a: i64, b: i64) -> (i64, i64, i64) {
 }
 
 // Modular inverse using extended gcd
-fn mod_inverse(a: i64, m: i64) -> Option<i64> {
+fn mod_inverse(a: i128, m: i128) -> Option<i128> {
     let (g, x, _) = extended_gcd(a, m);
     if g != 1 {
         None
@@ -28,7 +28,7 @@ fn mod_inverse(a: i64, m: i64) -> Option<i64> {
 }
 
 // Solve linear system A x = b mod p using Gaussian elimination
-fn solve_system_mod_p(mut a: Vec<Vec<i64>>, mut b: Vec<i64>, p: i64) -> Option<Vec<i64>> {
+fn solve_system_mod_p(mut a: Vec<Vec<i128>>, mut b: Vec<i128>, p: i128) -> Option<Vec<i128>> {
     let rows = a.len();
     let cols = if rows > 0 { a[0].len() } else { 0 };
 
@@ -79,7 +79,7 @@ fn solve_system_mod_p(mut a: Vec<Vec<i64>>, mut b: Vec<i64>, p: i64) -> Option<V
     }
 
     // Check consistency and extract solution
-    let mut x = vec![0i64; cols];
+    let mut x = vec![0i128; cols];
     let mut rank = 0;
     for i in 0..cols {
         if i >= rows {
@@ -115,11 +115,11 @@ fn solve_system_mod_p(mut a: Vec<Vec<i64>>, mut b: Vec<i64>, p: i64) -> Option<V
 }
 
 // Polynomial division mod p: num / den = quot + rem / den, deg(rem) < deg(den)
-fn poly_div_mod_p(num: &[i64], den: &[i64], p: i64) -> Option<(Vec<i64>, Vec<i64>)> {
+fn poly_div_mod_p(num: &[i128], den: &[i128], p: i128) -> Option<(Vec<i128>, Vec<i128>)> {
     if den.is_empty() || *den.last().unwrap() == 0 {
         return None;
     }
-    let mut rem: Vec<i64> = num.iter().map(|&v| mod_positive(v, p)).collect();
+    let mut rem: Vec<i128> = num.iter().map(|&v| mod_positive(v, p)).collect();
     let d_deg = den.len() - 1;
     let ld_den = mod_positive(*den.last().unwrap(), p);
     let inv_ld = match mod_inverse(ld_den, p) {
@@ -127,7 +127,7 @@ fn poly_div_mod_p(num: &[i64], den: &[i64], p: i64) -> Option<(Vec<i64>, Vec<i64
         None => return None,
     };
     let q_deg = if rem.len() <= d_deg { 0 } else { rem.len() - d_deg - 1 };
-    let mut quot = vec![0i64; q_deg + 1];
+    let mut quot = vec![0i128; q_deg + 1];
 
     for ii in (0..=q_deg).rev() {
         // Trim leading zeros from rem
@@ -158,7 +158,7 @@ fn poly_div_mod_p(num: &[i64], den: &[i64], p: i64) -> Option<(Vec<i64>, Vec<i64
     Some((quot, rem))
 }
 
-pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
+pub fn shamir_reconstruct_rs(shares: &[(i64, R)], t: usize) -> Option<R> {
     let p = P_PRIME;
     let n = shares.len();
     let k = t + 1;
@@ -167,11 +167,11 @@ pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
     }
 
     // Sort shares by x
-    let mut sorted_shares: Vec<(i32, R)> = shares.to_vec();
+    let mut sorted_shares: Vec<(i64, R)> = shares.to_vec();
     sorted_shares.sort_by_key(|&(x, _)| x);
 
     // Check distinct x
-    let mut xs: Vec<i32> = sorted_shares.iter().map(|&(x, _)| x).collect();
+    let mut xs: Vec<i64> = sorted_shares.iter().map(|&(x, _)| x).collect();
     let mut seen = HashSet::new();
     for &x in &xs {
         if !seen.insert(x) {
@@ -179,8 +179,8 @@ pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
         }
     }
 
-    let pp = p as i64;
-    let xs_mod: Vec<i64> = xs.iter().map(|&x| mod_positive(x as i64, pp)).collect();
+    let pp = p as i128;
+    let xs_mod: Vec<i128> = xs.iter().map(|&x| mod_positive(x as i128, pp)).collect();
 
     // Check distinct mod p
     let mut seen_mod = HashSet::new();
@@ -194,28 +194,28 @@ pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
     let e = (n - k) / 2;
     let v = d + 2 * e + 1; // number of variables
 
-    let mut secret_coeffs = [0i32; N];
+    let mut secret_coeffs = [0i64; N];
 
     for j in 0..N {
-        let ys: Vec<i64> = sorted_shares.iter().map(|&(_, r)| mod_positive(r.coeffs[j] as i64, pp)).collect();
+        let ys: Vec<i128> = sorted_shares.iter().map(|&(_, r)| mod_positive(r.coeffs[j] as i128, pp)).collect();
 
         // Build the system A x = b
-        let mut a: Vec<Vec<i64>> = vec![vec![0i64; v]; n];
-        let mut bb: Vec<i64> = vec![0i64; n];
+        let mut a: Vec<Vec<i128>> = vec![vec![0i128; v]; n];
+        let mut bb: Vec<i128> = vec![0i128; n];
 
         for i in 0..n {
             let x = xs_mod[i];
             let y = ys[i];
 
             // Coefficients for q_0 to q_{d+e}
-            let mut xp = 1i64;
+            let mut xp = 1i128;
             for jj in 0..=(d + e) {
                 a[i][jj] = xp;
                 xp = mod_positive(xp * x, pp);
             }
 
             // Coefficients for e_0 to e_{e-1}
-            let mut xp_e = 1i64;
+            let mut xp_e = 1i128;
             for jj in 0..e {
                 let col = d + e + 1 + jj;
                 a[i][col] = mod_positive(-y * xp_e, pp);
@@ -233,8 +233,8 @@ pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
         };
 
         // Extract Q and E
-        let q_vec: Vec<i64> = sol[0..=d + e].to_vec();
-        let mut e_vec: Vec<i64> = if e > 0 { sol[d + e + 1..].to_vec() } else { vec![] };
+        let q_vec: Vec<i128> = sol[0..=d + e].to_vec();
+        let mut e_vec: Vec<i128> = if e > 0 { sol[d + e + 1..].to_vec() } else { vec![] };
         e_vec.push(1); // leading coefficient 1 for E
 
         // Polynomial division Q / E
@@ -249,7 +249,7 @@ pub fn shamir_reconstruct_rs(shares: &[(i32, R)], t: usize) -> Option<R> {
         }
 
         // Secret coefficient is quot[0] mod p
-        secret_coeffs[j] = mod_positive(quot[0], pp) as i32;
+        secret_coeffs[j] = mod_positive(quot[0], pp) as i64;
     }
 
     Some(R { coeffs: secret_coeffs })

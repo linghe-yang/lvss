@@ -134,7 +134,7 @@ pub fn vector_dot_product(vec1: &DVector<R>, vec2: &DVector<R>) -> f64 {
     dot
 }
 
-pub fn vector_norm_inf(vec: &DVector<R>) -> i32 {
+pub fn vector_norm_inf(vec: &DVector<R>) -> i64 {
     vec.iter().map(|r| r.norm_inf()).max().unwrap_or(0)
 }
 pub fn vector_add(vec1: &DVector<R>, vec2: &DVector<R>) -> DVector<R> {
@@ -166,7 +166,7 @@ pub fn random_gaussian_dvector(len: usize, sigma: f64) -> DVector<R> {
     )
 }
 pub fn generate_low_l1_r(rng: &mut impl RngCore) -> R {
-    let mut coeffs = [0i32; N];
+    let mut coeffs = [0i64; N];
     let max_non_zero = MAX_C_L1.min(N);
 
     // Randomly choose number of non-zero coefficients
@@ -225,7 +225,7 @@ pub fn h(pk: &PublicKey, b: &DMatrix<R>, target: &DVector<R>, commitment: &DVect
 
 
 
-pub fn poly_extended_euclid(a: Vec<i32>, b: Vec<i32>, p: i32) -> (Vec<i32>, Vec<i32>, Vec<i32>) {
+pub fn poly_extended_euclid(a: Vec<i64>, b: Vec<i64>, p: i64) -> (Vec<i64>, Vec<i64>, Vec<i64>) {
     if b.iter().all(|&x| x == 0) {
         (trim_trailing_zeros(a), vec![1], vec![0])
     } else {
@@ -235,7 +235,7 @@ pub fn poly_extended_euclid(a: Vec<i32>, b: Vec<i32>, p: i32) -> (Vec<i32>, Vec<
         (g, t, new_t)
     }
 }
-fn mod_inverse(a: i32, p: i32) -> Option<i32> {
+fn mod_inverse(a: i64, p: i64) -> Option<i64> {
     let (g, s, _) = extended_euclid_int(a, p);
     if g != 1 {
         None
@@ -244,7 +244,7 @@ fn mod_inverse(a: i32, p: i32) -> Option<i32> {
     }
 }
 
-fn extended_euclid_int(a: i32, b: i32) -> (i32, i32, i32) {
+fn extended_euclid_int(a: i64, b: i64) -> (i64, i64, i64) {
     if a == 0 {
         (b, 0, 1)
     } else {
@@ -253,8 +253,8 @@ fn extended_euclid_int(a: i32, b: i32) -> (i32, i32, i32) {
     }
 }
 
-// Helper for polynomial operations (Vec<i32> low to high degree)
-fn trim_trailing_zeros(mut v: Vec<i32>) -> Vec<i32> {
+// Helper for polynomial operations (Vec<i64> low to high degree)
+fn trim_trailing_zeros(mut v: Vec<i64>) -> Vec<i64> {
     while v.len() > 1 && *v.last().unwrap() == 0 {
         v.pop();
     }
@@ -264,7 +264,7 @@ fn trim_trailing_zeros(mut v: Vec<i32>) -> Vec<i32> {
     v
 }
 
-// fn poly_add(a: &Vec<i32>, b: &Vec<i32>, p: i32) -> Vec<i32> {
+// fn poly_add(a: &Vec<i64>, b: &Vec<i64>, p: i64) -> Vec<i64> {
 //     let max_len = a.len().max(b.len());
 //     let mut result = vec![0; max_len];
 //     for i in 0..max_len {
@@ -275,7 +275,7 @@ fn trim_trailing_zeros(mut v: Vec<i32>) -> Vec<i32> {
 //     trim_trailing_zeros(result)
 // }
 
-fn poly_sub(a: &Vec<i32>, b: &Vec<i32>, p: i32) -> Vec<i32> {
+fn poly_sub(a: &Vec<i64>, b: &Vec<i64>, p: i64) -> Vec<i64> {
     let max_len = a.len().max(b.len());
     let mut result = vec![0; max_len];
     for i in 0..max_len {
@@ -286,7 +286,7 @@ fn poly_sub(a: &Vec<i32>, b: &Vec<i32>, p: i32) -> Vec<i32> {
     trim_trailing_zeros(result)
 }
 
-fn poly_mul(a: &Vec<i32>, b: &Vec<i32>, p: i32) -> Vec<i32> {
+fn poly_mul(a: &Vec<i64>, b: &Vec<i64>, p: i64) -> Vec<i64> {
     let len = a.len() + b.len() - 1;
     let mut result = vec![0; len];
     for i in 0..a.len() {
@@ -297,7 +297,7 @@ fn poly_mul(a: &Vec<i32>, b: &Vec<i32>, p: i32) -> Vec<i32> {
     trim_trailing_zeros(result)
 }
 
-fn poly_div(dividend: &Vec<i32>, divisor: &Vec<i32>, p: i32) -> (Vec<i32>, Vec<i32>) {
+fn poly_div(dividend: &Vec<i64>, divisor: &Vec<i64>, p: i64) -> (Vec<i64>, Vec<i64>) {
     let mut dividend = dividend.clone();
     let divisor = divisor.clone();
     if divisor.is_empty() || divisor.last().unwrap_or(&0) == &0 {

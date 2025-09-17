@@ -13,7 +13,7 @@ use serde::de::{Error, Visitor};
 pub const N: usize = 256;
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct R {
-    pub coeffs: [i32; N],
+    pub coeffs: [i64; N],
 }
 
 impl Zero for R {
@@ -36,7 +36,7 @@ impl R {
     }
 
     /// Generates a random polynomial with coefficients uniformly sampled from [a, b].
-    pub fn random_uniform(a: i32, b: i32) -> Self {
+    pub fn random_uniform(a: i64, b: i64) -> Self {
         let mut rng = rand::thread_rng();
         let mut coeffs = [0; N];
         for coeff in coeffs.iter_mut() {
@@ -59,13 +59,13 @@ impl R {
         let normal = Normal::new(0.0, sigma).unwrap();
         let mut coeffs = [0; N];
         for coeff in coeffs.iter_mut() {
-            *coeff = normal.sample(&mut rng).round() as i32;
+            *coeff = normal.sample(&mut rng).round() as i64;
         }
         Self { coeffs }
     }
 
     /// Computes the 1-norm (sum of absolute values of coefficients).
-    pub fn norm_l1(&self) -> i32 {
+    pub fn norm_l1(&self) -> i64 {
         self.coeffs.iter().map(|&x| x.abs()).sum()
     }
 
@@ -75,11 +75,11 @@ impl R {
     }
 
     /// Computes the infinity norm (maximum absolute value of coefficients).
-    pub fn norm_inf(&self) -> i32 {
+    pub fn norm_inf(&self) -> i64 {
         self.coeffs.iter().map(|&x| x.abs()).max().unwrap_or(0)
     }
-    pub fn inverse_mod(&self, p: i32) -> Option<R> {
-        let g_coeffs = self.coeffs.iter().map(|&c| c % p).collect::<Vec<i32>>();
+    pub fn inverse_mod(&self, p: i64) -> Option<R> {
+        let g_coeffs = self.coeffs.iter().map(|&c| c % p).collect::<Vec<i64>>();
         let mut f_coeffs = vec![1];
         f_coeffs.extend(vec![0; N - 1]);
         f_coeffs.push(1);
@@ -100,7 +100,7 @@ impl R {
     }
 
     pub fn to_bytes(&self) -> Vec<u8> {
-        let mut bytes = Vec::with_capacity(N * 4);
+        let mut bytes = Vec::with_capacity(N * 8);
         for &coeff in self.coeffs.iter() {
             bytes.extend_from_slice(&coeff.to_le_bytes());
         }
@@ -114,9 +114,9 @@ impl Default for R {
     }
 }
 
-impl From<i32> for R {
+impl From<i64> for R {
     /// Converts a constant integer into a constant polynomial in the ring.
-    fn from(val: i32) -> Self {
+    fn from(val: i64) -> Self {
         let mut coeffs = [0; N];
         coeffs[0] = val;
         Self { coeffs }
@@ -197,10 +197,10 @@ impl MulAssign for R {
     }
 }
 
-impl Mul<i32> for R {
+impl Mul<i64> for R {
     type Output = Self;
 
-    fn mul(self, scalar: i32) -> Self {
+    fn mul(self, scalar: i64) -> Self {
         let mut coeffs = [0; N];
         for (i, &coeff) in self.coeffs.iter().enumerate() {
             coeffs[i] = coeff.wrapping_mul(scalar);
@@ -209,7 +209,7 @@ impl Mul<i32> for R {
     }
 }
 
-impl Mul<R> for i32 {
+impl Mul<R> for i64 {
     type Output = R;
 
     fn mul(self, rq: R) -> R {
@@ -232,7 +232,7 @@ impl Serialize for R {
         let bytes: &[u8] = unsafe {
             std::slice::from_raw_parts(
                 self.coeffs.as_ptr() as *const u8,
-                N * size_of::<i32>(),
+                N * size_of::<i64>(),
             )
         };
         let encoded = base64::encode(bytes);
@@ -246,7 +246,7 @@ impl<'de> Visitor<'de> for RVisitor {
     type Value = R;
 
     fn expecting(&self, formatter: &mut Formatter) -> fmt::Result {
-        formatter.write_str("a base64 string representing 256 i32 values")
+        formatter.write_str("a base64 string representing 256 i64 values")
     }
 
     fn visit_str<E>(self, v: &str) -> Result<R, E>
@@ -254,10 +254,10 @@ impl<'de> Visitor<'de> for RVisitor {
         E: Error,
     {
         let decoded = base64::decode(v).map_err(E::custom)?;
-        if decoded.len() != N * size_of::<i32>() {
+        if decoded.len() != N * size_of::<i64>() {
             return Err(E::custom("invalid length"));
         }
-        let mut coeffs = [0i32; N];
+        let mut coeffs = [0i64; N];
         unsafe {
             std::ptr::copy_nonoverlapping(
                 decoded.as_ptr(),

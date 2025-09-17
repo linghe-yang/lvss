@@ -10,6 +10,8 @@ pub mod rp;
 pub mod rq;
 pub mod util;
 mod zetas;
+mod primefind;
+mod barrett;
 
 pub use gadget::build_b_matrix;
 pub use gadget::calculate_u;
@@ -119,7 +121,7 @@ mod tests {
     #[test]
     fn test() {
         let (pk, sk) = VE::gen_keypair();
-        let xl = 1;
+        let xl = 2;
         let yl = 1;
         let half_p = P_PRIME / 2;
         let x = random_dvector(xl);

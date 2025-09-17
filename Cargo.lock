@@ -607,6 +607,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "num-bigint"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
+dependencies = [
+ "num-integer",
+ "num-traits",
+]
+
+[[package]]
 name = "num-bigint-dig"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1132,7 +1142,7 @@ dependencies = [
  "linked-hash-map",
  "log",
  "merkle_light",
- "num-bigint",
+ "num-bigint 0.2.6",
  "num-bigint-dig",
  "reed-solomon-erasure",
  "serde",
@@ -1159,6 +1169,7 @@ version = "0.1.0"
 dependencies = [
  "base64 0.22.1",
  "nalgebra",
+ "num-bigint 0.4.6",
  "rand 0.8.5",
  "rand_distr",
  "serde",

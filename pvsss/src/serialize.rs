@@ -106,8 +106,8 @@ impl Serialize for PublicShare {
         let mut st = serializer.serialize_struct("PublicShare", 2)?;
         st.serialize_field("merkle_root", &self.merkle_root)?;
 
-        // 把 Vec<(i32, DVector<R>)> 转成 Vec<(i32, Vec<R>)>
-        let v_serializable: Vec<(i32, Vec<R>)> = self
+        // 把 Vec<(i64, DVector<R>)> 转成 Vec<(i64, Vec<R>)>
+        let v_serializable: Vec<(i64, Vec<R>)> = self
             .u_vec
             .iter()
             .map(|(id, dv)| (*id, dv.as_slice().to_vec()))
@@ -132,7 +132,7 @@ impl<'de> Visitor<'de> for PublicShareVisitor {
         A: MapAccess<'de>,
     {
         let mut merkle_root: Option<Hash> = None;
-        let mut u_vec: Option<Vec<(i32, Vec<R>)>> = None;
+        let mut u_vec: Option<Vec<(i64, Vec<R>)>> = None;
 
         while let Some(key) = map.next_key::<String>()? {
             match key.as_str() {
@@ -145,8 +145,8 @@ impl<'de> Visitor<'de> for PublicShareVisitor {
         let merkle_root = merkle_root.ok_or_else(|| A::Error::missing_field("merkle_root"))?;
         let u_vec_raw = u_vec.ok_or_else(|| A::Error::missing_field("u_vec"))?;
 
-        // Vec<(i32, Vec<R>)> → Vec<(i32, DVector<R>)>
-        let u_vec: Vec<(i32, DVector<R>)> = u_vec_raw
+        // Vec<(i64, Vec<R>)> → Vec<(i64, DVector<R>)>
+        let u_vec: Vec<(i64, DVector<R>)> = u_vec_raw
             .into_iter()
             .map(|(id, v)| (id, DVector::from_vec(v)))
             .collect();

@@ -12,8 +12,8 @@ use serde::{Deserialize, Serialize};
 pub struct PublicKey {
     pub a: R,
     pub t: R,
-    pub p: i32,
-    pub q: i32,
+    pub p: i64,
+    pub q: i64,
 }
 impl PublicKey {
     pub fn to_bytes(&self) -> Vec<u8> {
@@ -54,8 +54,8 @@ pub const MAX_C_L1: usize = 36;
 /// Setup function to generate keypair based on Ring-LWE parameters.
 /// In production, use larger q (e.g., 12289 or similar 5 mod 8 prime) and adjust.
 pub fn setup() -> (PublicKey, SecretKey) {
-    let p: i32 = P_PRIME; // Message modulus >2
-    let q: i32 = Q_PRIME; // Ring modulus, prime congruent to 5 mod 8
+    let p: i64 = P_PRIME; // Message modulus >2
+    let q: i64 = Q_PRIME; // Ring modulus, prime congruent to 5 mod 8
 
     // s1, s2 ← S1: uniform in {-1,0,1}
     let s1 = R::random_uniform(-1, 1);
@@ -273,6 +273,7 @@ pub fn verify(
     // Step 2: if c != H(pk, b, target, commitment), return false
     if c != &c_prime {
         return false;
+
     }
 
     // Step 3: return true
@@ -320,7 +321,6 @@ pub fn decrypt(
         let v_s1 = v[i].mul_mod_q(&sk.s1);
         let w_minus_vs1 = w[i] - v_s1;
         m[i] = w_minus_vs1.mul_mod_q(&c_bar);
-        m[i].mod_p();
     }
 
     let mut valid = true;
@@ -329,58 +329,59 @@ pub fn decrypt(
         if m[i].norm_inf() as f64 > (pk.q as f64) / (2.0 * c_max as f64) {
             valid = false;
         }
-        let mut temp = m[i];
-        temp.mod_p();
-        if temp.norm_inf() as f64 >= 12.0 * sigma {
+        m[i].mod_p();
+        if m[i].norm_inf() as f64 >= 12.0 * sigma {
             valid = false;
         }
     }
     if valid {
         // Step 5: Return (m mod p, c_bar)
-        let m_bar = DVector::from_fn(k, |i, _| {
-            let mut temp = m[i];
-            temp.mod_p();
-            temp
-        });
-        return Some(m_bar);
+        // let m_bar = DVector::from_fn(k, |i, _| {
+        //     let mut temp = m[i];
+        //     temp.mod_p();
+        //     temp
+        // });
+        return Some(m);
+    } else {
+        panic!("decryption error");
     }
     // otherwise, malicious encryptor provides a mˉ satisfying m/c=mˉ/cˉmod p, we have to guess and recover m
     //TODO: the malicious encryptor case has not been tested
-    let mut rng = thread_rng();
-    loop {
-        // Guess c' ∈ C
-        let c_prime = generate_low_l1_r(&mut rng);
-
-        // Compute c_bar = c - c'
-        let c_bar = *c - c_prime;
-
-        // Compute m = (w - v s1) c_bar mod q
-        let mut m = DVector::zeros(k);
-        valid = true;
-        for i in 0..k {
-            let v_s1 = v[i] * sk.s1;
-            let w_minus_vs1 = w[i] - v_s1;
-            m[i] = w_minus_vs1.mul_mod_q(&c_bar);
-            let mut temp = m[i];
-            temp.mod_p();
-            if m[i].norm_inf() as f64 > (pk.q as f64) / (2.0 * c_max as f64)
-                || temp.norm_inf() as f64 >= 12.0 * sigma
-            {
-                valid = false;
-                break;
-            }
-        }
-        if valid {
-            let m_bar = DVector::from_fn(k, |i, _| {
-                let mut temp = m[i];
-                temp.mod_p();
-                temp
-            });
-            // Compute original m = m_bar * (c * inv(c_bar)) mod p : p must be 5 mod 8 according to Lemma 2.2 (making c_bar invertible)
-            let inv_c_bar = c_bar.inverse_mod(pk.p).unwrap();
-            let c_inv_c_bar = c.mul_mod_p(&inv_c_bar);
-            let original_m = DVector::from_fn(k, |i, _| m_bar[i].mul_mod_p(&c_inv_c_bar));
-            return Some(original_m);
-        }
-    }
+    // let mut rng = thread_rng();
+    // loop {
+    //     // Guess c' ∈ C
+    //     let c_prime = generate_low_l1_r(&mut rng);
+    //
+    //     // Compute c_bar = c - c'
+    //     let c_bar = *c - c_prime;
+    //
+    //     // Compute m = (w - v s1) c_bar mod q
+    //     let mut m = DVector::zeros(k);
+    //     valid = true;
+    //     for i in 0..k {
+    //         let v_s1 = v[i] * sk.s1;
+    //         let w_minus_vs1 = w[i] - v_s1;
+    //         m[i] = w_minus_vs1.mul_mod_q(&c_bar);
+    //         let mut temp = m[i];
+    //         temp.mod_p();
+    //         if m[i].norm_inf() as f64 > (pk.q as f64) / (2.0 * c_max as f64)
+    //             || temp.norm_inf() as f64 >= 12.0 * sigma
+    //         {
+    //             valid = false;
+    //             break;
+    //         }
+    //     }
+    //     if valid {
+    //         let m_bar = DVector::from_fn(k, |i, _| {
+    //             let mut temp = m[i];
+    //             temp.mod_p();
+    //             temp
+    //         });
+    //         // Compute original m = m_bar * (c * inv(c_bar)) mod p : p must be 5 mod 8 according to Lemma 2.2 (making c_bar invertible)
+    //         let inv_c_bar = c_bar.inverse_mod(pk.p).unwrap();
+    //         let c_inv_c_bar = c.mul_mod_p(&inv_c_bar);
+    //         let original_m = DVector::from_fn(k, |i, _| m_bar[i].mul_mod_p(&c_inv_c_bar));
+    //         return Some(original_m);
+    //     }
+    // }
 }
