@@ -1,4 +1,4 @@
-use crate::components::{PrivateShare, PublicShare, SuppleShare};
+use crate::components::{PrivateShare, PublicShare, SuppleShare, ID};
 use hrcrypto::hash::Hash;
 use merkle_light::proof::Proof;
 use nalgebra::DVector;
@@ -36,7 +36,7 @@ impl<'de> Visitor<'de> for PrivateShareVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let id: i64 = seq
+        let id: ID = seq
             .next_element()?
             .ok_or_else(|| de::Error::invalid_length(0, &self))?;
         let v_vec: Vec<R> = seq
@@ -100,7 +100,7 @@ impl<'de> Visitor<'de> for SuppleShareVisitor {
     where
         A: SeqAccess<'de>,
     {
-        let id: i64 = seq
+        let id: ID = seq
             .next_element()?
             .ok_or_else(|| de::Error::invalid_length(0, &self))?;
         let v_vec: Vec<R> = seq
@@ -149,7 +149,7 @@ impl Serialize for PublicShare {
     {
         let mut seq = serializer.serialize_seq(Some(2))?;
         seq.serialize_element(&self.merkle_root)?;
-        let u_vec_serializable: Vec<(i64, Vec<R>)> = self
+        let u_vec_serializable: Vec<(ID, Vec<R>)> = self
             .u_vec
             .iter()
             .map(|(id, dv)| (*id, dv.as_slice().to_vec()))
@@ -176,13 +176,13 @@ impl<'de> Visitor<'de> for PublicShareVisitor {
         let merkle_root: Hash = seq
             .next_element()?
             .ok_or_else(|| de::Error::custom("Missing merkle_root in sequence"))?;
-        let u_vec_raw: Vec<(i64, Vec<R>)> = seq
+        let u_vec_raw: Vec<(ID, Vec<R>)> = seq
             .next_element()?
             .ok_or_else(|| de::Error::custom("Missing u_vec in sequence"))?;
         if seq.next_element::<serde::de::IgnoredAny>()?.is_some() {
             return Err(de::Error::custom("Too many elements in sequence"));
         }
-        let u_vec: Vec<(i64, DVector<R>)> = u_vec_raw
+        let u_vec: Vec<(ID, DVector<R>)> = u_vec_raw
             .into_iter()
             .map(|(id, v)| (id, DVector::from_vec(v)))
             .collect();

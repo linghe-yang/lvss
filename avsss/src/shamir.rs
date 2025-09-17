@@ -2,8 +2,9 @@ use nalgebra::DVector;
 use ve::r_ring::R;
 use ve::rp::P_PRIME;
 use ve::util::random_dvector;
+use crate::components::ID;
 
-pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i64, DVector<R>)> {
+pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(ID, DVector<R>)> {
     let dim = s.len();
     let p = P_PRIME;
     let mut coeffs: Vec<DVector<R>> = vec![s.clone()];
@@ -22,11 +23,11 @@ pub fn shamir_share(s: &DVector<R>, n: usize, t: usize) -> Vec<(i64, DVector<R>)
             let term = coeffs[k].map(|r| r.scalar_mul_mod_p(scalar));
             eval = eval.zip_map(&term, |a, b| a.add_mod_p(&b));
         }
-        shares.push((x, eval));
+        shares.push((x as ID, eval));
     }
     shares
 }
-pub fn shamir_reconstruct(shares: &[(i64, DVector<R>)], t: usize) -> Option<DVector<R>> {
+pub fn shamir_reconstruct(shares: &[(ID, DVector<R>)], t: usize) -> Option<DVector<R>> {
     let p = P_PRIME;
     let m = shares.len();
     if m < t + 1 {
@@ -57,7 +58,7 @@ pub fn shamir_reconstruct(shares: &[(i64, DVector<R>)], t: usize) -> Option<DVec
 }
 
 
-fn reconstruct_base(shares: &[(i64, DVector<R>)], p: i64) -> DVector<R> {
+fn reconstruct_base(shares: &[(ID, DVector<R>)], p: i64) -> DVector<R> {
     let m = shares.len(); // Exactly t+1
     let dim = shares[0].1.len();
     let zero_r = R::default();
@@ -74,9 +75,9 @@ fn reconstruct_base(shares: &[(i64, DVector<R>)], p: i64) -> DVector<R> {
                 continue;
             }
             let xk = shares[k].0;
-            let num_factor = mod_diff(0, xk, p); // For f(0)
+            let num_factor = mod_diff(0, xk as i64, p); // For f(0)
             l_num = mod_mul(l_num, num_factor, p);
-            let den_factor = mod_diff(xj, xk, p);
+            let den_factor = mod_diff(xj as i64, xk as i64, p);
             l_den = mod_mul(l_den, den_factor, p);
         }
 
@@ -92,7 +93,7 @@ fn reconstruct_base(shares: &[(i64, DVector<R>)], p: i64) -> DVector<R> {
 
 
 // Helper function to evaluate the polynomial at a new point x_new using exactly t+1 shares
-fn lagrange_eval(shares: &[(i64, DVector<R>)], x_new: i64, p: i64) -> DVector<R> {
+fn lagrange_eval(shares: &[(ID, DVector<R>)], x_new: ID, p: i64) -> DVector<R> {
     let m = shares.len(); // Exactly t+1
     let dim = shares[0].1.len();
     let zero_r = R::default();
@@ -109,8 +110,8 @@ fn lagrange_eval(shares: &[(i64, DVector<R>)], x_new: i64, p: i64) -> DVector<R>
                 continue;
             }
             let xj = shares[j].0;
-            num = mod_mul(num, mod_diff(x_new, xj, p), p);
-            den = mod_mul(den, mod_diff(xi, xj, p), p);
+            num = mod_mul(num, mod_diff(x_new as i64, xj as i64, p), p);
+            den = mod_mul(den, mod_diff(xi as i64, xj as i64, p), p);
         }
 
         let inv_den = mod_inverse(den, p);

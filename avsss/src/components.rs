@@ -21,9 +21,11 @@ pub const R_SIGMA: f64 = 1.0;
 pub const B_PRIME: f64 = 100000.0;
 pub const BETA: i64 = 128;
 
+pub type ID = i32;
+
 #[derive(Debug, Clone)]
 pub struct PrivateShare {
-    pub id: i64,
+    pub id: ID,
     pub v: DVector<R>,
     pub w: DVector<R>,
     pub merkle_proof: Proof<Hash>,
@@ -32,12 +34,12 @@ pub struct PrivateShare {
 #[derive(Debug, Clone, Default)]
 pub struct PublicShare {
     pub merkle_root: Hash,
-    pub u_vec: Vec<(i64, DVector<R>)>,
+    pub u_vec: Vec<(ID, DVector<R>)>,
 }
 
 #[derive(Debug, Clone)]
 pub struct SuppleShare {
-    pub id: i64,
+    pub id: ID,
     pub v: DVector<R>,
     pub w: DVector<R>,
     pub c: R,
@@ -47,10 +49,10 @@ pub struct SuppleShare {
 
 #[derive(Debug, Clone)]
 pub struct SharingStore {
-    pub ciphers: Vec<(i64, DVector<R>, DVector<R>, Store)>,
-    pub u_vec: Vec<(i64, DVector<R>)>,
+    pub ciphers: Vec<(ID, DVector<R>, DVector<R>, Store)>,
+    pub u_vec: Vec<(ID, DVector<R>)>,
     pub r: DMatrix<R>,
-    pub merkle_proofs: Vec<(i64,Proof<Hash>)>,
+    pub merkle_proofs: Vec<(ID,Proof<Hash>)>,
 }
 
 impl Default for SharingStore {
@@ -64,14 +66,14 @@ impl Default for SharingStore {
     }
 }
 impl SharingStore {
-    pub fn filter_by_indices(&self, indices: &[i64]) -> Self {
+    pub fn filter_by_indices(&self, indices: &[ID]) -> Self {
         // 检查 indices 是否为空
         if indices.is_empty() {
             panic!("Input indices array cannot be empty");
         }
 
         // 收集 ciphers 中匹配的元素
-        let filtered_ciphers: Vec<(i64, DVector<R>, DVector<R>, Store)> = indices
+        let filtered_ciphers: Vec<(ID, DVector<R>, DVector<R>, Store)> = indices
             .iter()
             .filter_map(|&idx| {
                 self.ciphers
@@ -82,12 +84,12 @@ impl SharingStore {
             .collect();
 
         // 收集 u_vec 中匹配的元素
-        let filtered_u_vec: Vec<(i64, DVector<R>)> = indices
+        let filtered_u_vec: Vec<(ID, DVector<R>)> = indices
             .iter()
             .filter_map(|&idx| self.u_vec.iter().find(|(i, _)| *i == idx).cloned())
             .collect();
 
-        let filtered_mfs: Vec<(i64,Proof<Hash>)> = indices.iter().filter_map(|&idx| {
+        let filtered_mfs: Vec<(ID,Proof<Hash>)> = indices.iter().filter_map(|&idx| {
             self.merkle_proofs.iter().find(|(i,_)| *i == idx).cloned()
         }).collect();
 
@@ -110,7 +112,7 @@ pub fn share(
     x: DVector<R>,
     n: usize,
     t: usize,
-    pks: &Vec<(i64, PublicKey)>,
+    pks: &Vec<(ID, PublicKey)>,
 ) -> (Vec<PrivateShare>, PublicShare, SharingStore) {
     let x_shares = shamir_share(&x, n, t);
     let y = random_gaussian_dvector(Y_LEN, Y_SIGMA);
@@ -169,7 +171,7 @@ pub fn share(
     (shares, ps, st)
 }
 
-pub fn supple_share(vss_st: SharingStore, pks: &Vec<(i64, PublicKey)>) -> Vec<SuppleShare> {
+pub fn supple_share(vss_st: SharingStore, pks: &Vec<(ID, PublicKey)>) -> Vec<SuppleShare> {
     let b = build_b_matrix(&vss_st.r);
     let mut shares = Vec::new();
     for (id, v, w, st) in vss_st.ciphers.iter() {
@@ -239,8 +241,8 @@ pub fn test_share_avsss() {
     let mut sks = Vec::new();
     for i in 1..=n {
         let (pk, sk) = VE::gen_keypair();
-        pks.push((i as i64, pk));
-        sks.push((i as i64, sk));
+        pks.push((i as ID, pk));
+        sks.push((i as ID, sk));
     }
 
     let now = Instant::now();
@@ -261,7 +263,7 @@ pub fn test_share_avsss() {
     let mut x_decs = Vec::new();
     for id in 0..n {
         let dec = decrypt(&sks[id].1, &pri_shares[id]).unwrap();
-        x_decs.push((id as i64 + 1, dec.0));
+        x_decs.push((id as ID + 1, dec.0));
     }
     let x_recon = shamir_reconstruct(&x_decs, t).unwrap();
 
