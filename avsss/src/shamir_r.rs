@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use ve::r_ring::{N, R};
 use ve::rp::P_PRIME;
+use crate::components::ID;
 
 // Helper function to compute (a % m) in positive range
 fn mod_positive(a: i128, m: i128) -> i128 {
@@ -28,7 +29,7 @@ fn mod_inverse(a: i128, m: i128) -> Option<i128> {
 }
 
 // Lagrange interpolation at a target point for scalar values in mod p
-fn lagrange_interpolate_at(target: i64, points: &[(i64, i64)], p: i64) -> Option<i64> {
+fn lagrange_interpolate_at(target: ID, points: &[(ID, i64)], p: i64) -> Option<i64> {
     let n = points.len();
     let pp = p as i128;
     let target_mod = mod_positive(target as i128, pp);
@@ -85,12 +86,12 @@ fn lagrange_interpolate_at(target: i64, points: &[(i64, i64)], p: i64) -> Option
 }
 
 // Interpolate R at target by interpolating each coefficient independently
-fn interpolate_r_at(target: i64, points: &[(i64, R)], p: i64) -> Option<R> {
+fn interpolate_r_at(target: ID, points: &[(ID, R)], p: i64) -> Option<R> {
     let n = points.len();
     let mut coeffs = [0i64; N];
 
     for j in 0..N {
-        let scalar_points: Vec<(i64, i64)> = points.iter().map(|&(x, ref r)| (x, r.coeffs[j])).collect();
+        let scalar_points: Vec<(ID, i64)> = points.iter().map(|&(x, ref r)| (x, r.coeffs[j])).collect();
         coeffs[j] = match lagrange_interpolate_at(target, &scalar_points, p) {
             Some(val) => val,
             None => return None,
@@ -117,7 +118,7 @@ fn eq_mod_r(a: &R, b: &R, p: i64) -> bool {
     true
 }
 
-pub fn shamir_reconstruct_r(shares: &[(i64, R)], t: usize) -> Option<R> {
+pub fn shamir_reconstruct_r(shares: &[(ID, R)], t: usize) -> Option<R> {
     let p = P_PRIME;
     let n_shares = shares.len();
     let threshold = t + 1;
@@ -127,7 +128,7 @@ pub fn shamir_reconstruct_r(shares: &[(i64, R)], t: usize) -> Option<R> {
     }
 
     // Check distinct x
-    let mut xs: Vec<i64> = shares.iter().map(|&(x, _)| x).collect();
+    let mut xs: Vec<ID> = shares.iter().map(|&(x, _)| x).collect();
     xs.sort();
     for i in 1..n_shares {
         if xs[i] == xs[i - 1] {
@@ -136,7 +137,7 @@ pub fn shamir_reconstruct_r(shares: &[(i64, R)], t: usize) -> Option<R> {
     }
 
     // Sort shares by x for determinism
-    let mut sorted_shares: Vec<(i64, R)> = shares.to_vec();
+    let mut sorted_shares: Vec<(ID, R)> = shares.to_vec();
     sorted_shares.sort_by_key(|&(x, _)| x);
 
     // Reconstruct using first threshold points

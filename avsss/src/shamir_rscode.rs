@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use ve::r_ring::{N, R};
 use ve::rp::P_PRIME;
+use crate::components::ID;
 
 // Helper function to compute (a % m) in positive range
 fn mod_positive(a: i128, m: i128) -> i128 {
@@ -158,7 +159,7 @@ fn poly_div_mod_p(num: &[i128], den: &[i128], p: i128) -> Option<(Vec<i128>, Vec
     Some((quot, rem))
 }
 
-pub fn shamir_reconstruct_rs(shares: &[(i64, R)], t: usize) -> Option<R> {
+pub fn shamir_reconstruct_rs(shares: &[(ID, R)], t: usize) -> Option<R> {
     let p = P_PRIME;
     let n = shares.len();
     let k = t + 1;
@@ -167,11 +168,11 @@ pub fn shamir_reconstruct_rs(shares: &[(i64, R)], t: usize) -> Option<R> {
     }
 
     // Sort shares by x
-    let mut sorted_shares: Vec<(i64, R)> = shares.to_vec();
+    let mut sorted_shares: Vec<(ID, R)> = shares.to_vec();
     sorted_shares.sort_by_key(|&(x, _)| x);
 
     // Check distinct x
-    let mut xs: Vec<i64> = sorted_shares.iter().map(|&(x, _)| x).collect();
+    let mut xs: Vec<ID> = sorted_shares.iter().map(|&(x, _)| x).collect();
     let mut seen = HashSet::new();
     for &x in &xs {
         if !seen.insert(x) {
