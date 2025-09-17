@@ -57,6 +57,17 @@ impl R {
         Self { coeffs }
     }
 
+    pub fn random_constant_ternary<RR: Rng>(rng: &mut RR) -> Self {
+        let mut coeffs = [0; N];
+        // Only sample the constant term (index 0), set others to 0
+        coeffs[0] = match rng.gen_range(0..4) {
+            0 => -1, // 1/4 probability
+            1 => 1,  // 1/4 probability
+            _ => 0,  // 1/2 probability
+        };
+        Self { coeffs }
+    }
+
     pub fn random_in_p() -> Self {
         Self::random_uniform(-P_PRIME/2, P_PRIME/2)
     }
